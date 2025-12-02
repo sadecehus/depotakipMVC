@@ -21,6 +21,13 @@ builder.Services.AddSession(options =>
 
 var app = builder.Build();
 
+// Veritabanı klasörünü oluştur (Railway için)
+var dataDir = Path.Combine(app.Environment.ContentRootPath, "data");
+if (!Directory.Exists(dataDir))
+{
+    Directory.CreateDirectory(dataDir);
+}
+
 // Seed data
 using (var scope = app.Services.CreateScope())
 {
