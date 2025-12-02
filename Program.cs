@@ -7,9 +7,21 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddControllersWithViews();
 
-// SQLite veritabanı bağlantısı
+// PostgreSQL veritabanı bağlantısı
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") 
+    ?? Environment.GetEnvironmentVariable("DATABASE_URL");
+
+if (!string.IsNullOrEmpty(connectionString) && connectionString.StartsWith("postgres://"))
+{
+    // Railway PostgreSQL formatını dönüştür
+    var uri = new Uri(connectionString);
+    var username = uri.UserInfo.Split(':')[0];
+    var password = uri.UserInfo.Split(':')[1];
+    connectionString = $"Host={uri.Host};Port={uri.Port};Database={uri.AbsolutePath.Trim('/')};Username={username};Password={password};SSL Mode=Require;Trust Server Certificate=true";
+}
+
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(connectionString));
 
 // Session ekle
 builder.Services.AddSession(options =>
@@ -20,13 +32,6 @@ builder.Services.AddSession(options =>
 });
 
 var app = builder.Build();
-
-// Veritabanı klasörünü oluştur (Railway için)
-var dataDir = Path.Combine(app.Environment.ContentRootPath, "data");
-if (!Directory.Exists(dataDir))
-{
-    Directory.CreateDirectory(dataDir);
-}
 
 // Seed data
 using (var scope = app.Services.CreateScope())
