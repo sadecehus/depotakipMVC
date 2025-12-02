@@ -8,8 +8,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllersWithViews();
 
 // PostgreSQL veritabanı bağlantısı (Railway)
-var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_PUBLIC_URL") 
-    ?? Environment.GetEnvironmentVariable("DATABASE_URL");
+var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL") 
+    ?? Environment.GetEnvironmentVariable("DATABASE_PUBLIC_URL");
 
 if (!string.IsNullOrEmpty(databaseUrl) && databaseUrl.StartsWith("postgresql://"))
 {
@@ -40,15 +40,23 @@ builder.Services.AddSession(options =>
 
 var app = builder.Build();
 
-// Seed data
+// Veritabanını oluştur ve migration'ları uygula
 using (var scope = app.Services.CreateScope())
 {
-    var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    context.Database.Migrate();
-    
-    if (!context.Products.Any())
+    try
     {
-        // Bölümler
+        var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+        
+        logger.LogInformation("Veritabanı migration başlatılıyor...");
+        context.Database.Migrate();
+        logger.LogInformation("Migration tamamlandı!");
+        
+        if (!context.Products.Any())
+        {
+            logger.LogInformation("Seed data ekleniyor...");
+            
+            // Bölümler
         var sections = new[]
         {
             new Section { Name = "A", Description = "Motor Parçaları" },
@@ -166,6 +174,19 @@ using (var scope = app.Services.CreateScope())
         }).ToArray();
         context.StockMovements.AddRange(movements);
         context.SaveChanges();
+        
+        logger.LogInformation("Seed data başarıyla eklendi!");
+    }
+    else
+    {
+        logger.LogInformation("Veritabanı zaten dolu, seed data atlanıyor.");
+    }
+    }
+    catch (Exception ex)
+    {
+        var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "Veritabanı migration/seed hatası!");
+        throw;
     }
 }
 
