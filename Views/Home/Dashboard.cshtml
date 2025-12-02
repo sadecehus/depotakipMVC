@@ -1,0 +1,869 @@
+@{
+    ViewData["Title"] = "Dashboard";
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Depo Yönetim Sistemi</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .sidebar {
+            min-height: 100vh;
+            background: linear-gradient(180deg, #2c3e50 0%, #34495e 100%);
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+        }
+        .sidebar .nav-link {
+            color: #ecf0f1;
+            padding: 15px 20px;
+            margin: 5px 10px;
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+        .sidebar .nav-link:hover {
+            background: rgba(255,255,255,0.1);
+            transform: translateX(5px);
+        }
+        .sidebar .nav-link.active {
+            background: #3498db;
+            color: white;
+        }
+        .sidebar .nav-link i {
+            margin-right: 10px;
+        }
+        .main-content {
+            background: #f8f9fa;
+            min-height: 100vh;
+        }
+        .navbar-custom {
+            background: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 15px 20px;
+        }
+        .content-area {
+            padding: 30px;
+        }
+        .card {
+            border: none;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 10px;
+        }
+        th {
+            user-select: none;
+        }
+        th:hover {
+            background-color: #e9ecef !important;
+        }
+        .sort-icon {
+            font-size: 0.8em;
+            color: #6c757d;
+            margin-left: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-2 px-0 sidebar">
+                <div class="text-center py-4">
+                    <h4 class="text-white">Kepçeci İŞ Makinaları</h4>
+                    <p class="text-white-50">@ViewBag.Username</p>
+                </div>
+                <nav class="nav flex-column mt-4">
+                    <a class="nav-link active" href="#" onclick="showPage('products')">
+                        <span>📋</span> Ürün Listesi
+                    </a>
+                    <a class="nav-link" href="#" onclick="showPage('addProduct')">
+                        <span>➕</span> Ürün Girişi
+                    </a>
+                    <a class="nav-link" href="#" onclick="showPage('sellProduct')">
+                        <span>💰</span> Ürün Satışı
+                    </a>
+                    <a class="nav-link" href="#" onclick="showPage('movements')">
+                        <span>📊</span> Giriş/Çıkış Raporu
+                    </a>
+                    <hr class="bg-light mx-3">
+                    <a class="nav-link text-danger font-weight-bold" asp-action="Logout">
+                        <span>🚪</span> Çıkış Yap
+                    </a>
+                </nav>
+            </div>
+
+            <!-- Main Content -->
+            <div class="col-md-10 main-content px-0">
+                <div class="navbar-custom">
+                    <h5 class="mb-0" id="pageTitle">Ürün Listesi</h5>
+                </div>
+                
+                <div class="content-area">
+                    <!-- Ürün Listesi Sayfası -->
+                    <div id="productsPage" class="page-content">
+                        <div class="card">
+                            <div class="card-body">
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <input type="text" id="searchInput" class="form-control" placeholder="🔍 Ürün ara (kod, isim, bölüm, raf)...">
+                                    </div>
+                                </div>
+                                <div class="table-responsive">
+                                    <table class="table table-hover" id="productsTable">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th onclick="sortTable(0)" style="cursor:pointer;">Ürün Kodu <span class="sort-icon">⇅</span></th>
+                                                <th onclick="sortTable(1)" style="cursor:pointer;">Ürün Adı <span class="sort-icon">⇅</span></th>
+                                                <th onclick="sortTable(2)" style="cursor:pointer;">Bölüm <span class="sort-icon">⇅</span></th>
+                                                <th onclick="sortTable(3)" style="cursor:pointer;">Raf <span class="sort-icon">⇅</span></th>
+                                                <th onclick="sortTable(4)" style="cursor:pointer;">Stok <span class="sort-icon">⇅</span></th>
+                                                <th onclick="sortTable(5)" style="cursor:pointer;">Min. Stok <span class="sort-icon">⇅</span></th>
+                                                <th onclick="sortTable(6)" style="cursor:pointer;">Fiyat <span class="sort-icon">⇅</span></th>
+                                                <th>İşlem</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="productsTableBody">
+                                            <tr>
+                                                <td colspan="8" class="text-center text-muted">Henüz ürün eklenmemiş</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Ürün Ekle Sayfası -->
+                    <div id="addProductPage" class="page-content" style="display:none;">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title mb-4">Ürün Girişi</h5>
+                                
+                                <!-- Seçim Butonları -->
+                                <div class="row mb-4">
+                                    <div class="col-md-6">
+                                        <button type="button" class="btn btn-outline-primary w-100" onclick="showNewProductForm()">
+                                            ➕ Yeni Ürün Oluştur
+                                        </button>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <button type="button" class="btn btn-outline-success w-100" onclick="showAddStockForm()">
+                                            📦 Varolan Ürüne Stok Ekle
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Yeni Ürün Formu -->
+                                <div id="newProductForm" style="display:none;">
+                                    <h6 class="mb-3">Yeni Ürün Bilgileri</h6>
+                                    <form id="addProductForm">
+                                        <div class="row">
+                                            <div class="col-md-6 mb-3">
+                                                <label class="form-label">Ürün Kodu *</label>
+                                                <input type="text" class="form-control" name="productCode" required>
+                                            </div>
+                                            <div class="col-md-6 mb-3">
+                                                <label class="form-label">Ürün Adı *</label>
+                                                <input type="text" class="form-control" name="name" required>
+                                            </div>
+                                            <div class="col-md-6 mb-3">
+                                                <label class="form-label">Bölüm * (örn: A, B, C)</label>
+                                                <input type="text" class="form-control" name="sectionName" id="sectionInput" placeholder="A" required>
+                                                <small class="text-muted">Yoksa otomatik oluşturulur</small>
+                                            </div>
+                                            <div class="col-md-6 mb-3">
+                                                <label class="form-label">Raf * (örn: 1. Raf, 2. Raf)</label>
+                                                <input type="text" class="form-control" name="shelfName" id="shelfInput" placeholder="1. Raf" required>
+                                                <small class="text-muted">Yoksa otomatik oluşturulur</small>
+                                            </div>
+                                            <div class="col-md-4 mb-3">
+                                                <label class="form-label">Başlangıç Stok *</label>
+                                                <input type="number" class="form-control" name="stock" value="0" required>
+                                            </div>
+                                            <div class="col-md-4 mb-3">
+                                                <label class="form-label">Minimum Stok *</label>
+                                                <input type="number" class="form-control" name="minimumStock" value="0" required>
+                                            </div>
+                                            <div class="col-md-4 mb-3">
+                                                <label class="form-label">Alış Fiyatı (₺)</label>
+                                                <input type="number" step="0.01" class="form-control" name="price" id="newProductPrice">
+                                            </div>
+                                            <div class="col-md-12 mb-3">
+                                                <label class="form-label">Açıklama</label>
+                                                <textarea class="form-control" name="description" rows="2"></textarea>
+                                            </div>
+                                        </div>
+                                        <button type="submit" class="btn btn-primary">Ürün Ekle</button>
+                                        <button type="button" class="btn btn-secondary" onclick="showPage('products')">İptal</button>
+                                    </form>
+                                </div>
+
+                                <!-- Stok Ekleme Formu -->
+                                <div id="addStockForm" style="display:none;">
+                                    <h6 class="mb-3">Mevcut Ürüne Stok Ekle</h6>
+                                    <form id="addStockToProductForm">
+                                        <div class="row">
+                                            <div class="col-md-12 mb-3">
+                                                <label class="form-label">Ürün Seç *</label>
+                                                <select class="form-select" name="productId" id="addStockProductSelect" required>
+                                                    <option value="">Ürün seçin</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-4 mb-3">
+                                                <label class="form-label">Mevcut Stok</label>
+                                                <input type="text" class="form-control" id="currentStockDisplay" readonly>
+                                            </div>
+                                            <div class="col-md-4 mb-3">
+                                                <label class="form-label">Eklenecek Miktar *</label>
+                                                <input type="number" class="form-control" name="quantity" id="addStockQuantity" min="1" required>
+                                            </div>
+                                            <div class="col-md-4 mb-3">
+                                                <label class="form-label">Birim Alış Fiyatı (₺)</label>
+                                                <input type="number" step="0.01" class="form-control" name="unitPrice" id="addStockUnitPrice">
+                                            </div>
+                                            <div class="col-md-12 mb-3">
+                                                <label class="form-label">Toplam Tutar</label>
+                                                <input type="text" class="form-control" id="addStockTotalPrice" readonly>
+                                            </div>
+                                            <div class="col-md-12 mb-3">
+                                                <label class="form-label">Notlar</label>
+                                                <textarea class="form-control" name="notes" rows="2"></textarea>
+                                            </div>
+                                        </div>
+                                        <button type="submit" class="btn btn-success">Stok Ekle</button>
+                                        <button type="button" class="btn btn-secondary" onclick="showPage('products')">İptal</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Stok Hareketleri Sayfası -->
+                    <div id="movementsPage" class="page-content" style="display:none;">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title mb-4">Giriş/Çıkış Mali Raporu</h5>
+                                <div class="row mb-3">
+                                    <div class="col-md-3">
+                                        <div class="card bg-success text-white">
+                                            <div class="card-body">
+                                                <h6>Toplam Alış</h6>
+                                                <h4 id="totalIncome">0 ₺</h4>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="card bg-danger text-white">
+                                            <div class="card-body">
+                                                <h6>Toplam Satış</h6>
+                                                <h4 id="totalExpense">0 ₺</h4>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="card bg-primary text-white">
+                                            <div class="card-body">
+                                                <h6>Net Kar/Zarar</h6>
+                                                <h4 id="netProfit">0 ₺</h4>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Tarih</th>
+                                                <th>Ürün Kodu</th>
+                                                <th>Ürün Adı</th>
+                                                <th>İşlem Tipi</th>
+                                                <th>Miktar</th>
+                                                <th>Birim Fiyat</th>
+                                                <th>Toplam</th>
+                                                <th>Notlar</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="movementsTableBody">
+                                            <tr>
+                                                <td colspan="8" class="text-center text-muted">Henüz hareket kaydı yok</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Ürün Satış Sayfası -->
+                    <div id="sellProductPage" class="page-content" style="display:none;">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title mb-4">Ürün Satışı</h5>
+                                <form id="sellProductForm">
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label">Ürün Seç *</label>
+                                            <select class="form-select" name="productId" id="sellProductSelect" required>
+                                                <option value="">Ürün seçin</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label">Mevcut Stok</label>
+                                            <input type="text" class="form-control" id="currentStock" readonly>
+                                        </div>
+                                        <div class="col-md-4 mb-3">
+                                            <label class="form-label">Satış Miktarı *</label>
+                                            <input type="number" class="form-control" name="quantity" id="sellQuantity" min="1" required>
+                                        </div>
+                                        <div class="col-md-4 mb-3">
+                                            <label class="form-label">Birim Satış Fiyatı (₺) *</label>
+                                            <input type="number" step="0.01" class="form-control" name="unitPrice" id="sellUnitPrice" required>
+                                        </div>
+                                        <div class="col-md-4 mb-3">
+                                            <label class="form-label">Toplam Tutar</label>
+                                            <input type="text" class="form-control" id="sellTotalPrice" readonly>
+                                        </div>
+                                        <div class="col-md-12 mb-3">
+                                            <label class="form-label">Notlar</label>
+                                            <textarea class="form-control" name="notes" rows="2"></textarea>
+                                        </div>
+                                    </div>
+                                    <button type="submit" class="btn btn-success">Satışı Tamamla</button>
+                                    <button type="button" class="btn btn-secondary" onclick="showPage('products')">İptal</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ürün Düzenleme Modal -->
+    <div class="modal fade" id="editProductModal" tabindex="-1" aria-labelledby="editProductModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editProductModalLabel">Ürün Düzenle</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editProductForm">
+                        <input type="hidden" id="editProductId">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Ürün Kodu *</label>
+                                <input type="text" class="form-control" id="editProductCode" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Ürün Adı *</label>
+                                <input type="text" class="form-control" id="editProductName" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Bölüm *</label>
+                                <input type="text" class="form-control" id="editSectionName" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Raf *</label>
+                                <input type="text" class="form-control" id="editShelfName" required>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Stok *</label>
+                                <input type="number" class="form-control" id="editStock" min="0" required>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Minimum Stok *</label>
+                                <input type="number" class="form-control" id="editMinimumStock" min="0" required>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Fiyat (₺)</label>
+                                <input type="number" step="0.01" class="form-control" id="editPrice">
+                            </div>
+                            <div class="col-md-12 mb-3">
+                                <label class="form-label">Açıklama</label>
+                                <textarea class="form-control" id="editDescription" rows="2"></textarea>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                    <button type="button" class="btn btn-primary" onclick="saveProductEdit()">Kaydet</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function showPage(pageName) {
+            // Tüm sayfaları gizle
+            document.querySelectorAll('.page-content').forEach(p => p.style.display = 'none');
+            
+            // Tüm menü linklerinden active sınıfını kaldır
+            document.querySelectorAll('.sidebar .nav-link').forEach(link => {
+                link.classList.remove('active');
+            });
+            
+            // İlgili sayfayı göster ve menüyü aktif et
+            if(pageName === 'products') {
+                document.getElementById('productsPage').style.display = 'block';
+                document.getElementById('pageTitle').textContent = 'Ürün Listesi';
+                document.querySelectorAll('.sidebar .nav-link')[0].classList.add('active');
+                loadProducts();
+            } else if(pageName === 'addProduct') {
+                document.getElementById('addProductPage').style.display = 'block';
+                document.getElementById('pageTitle').textContent = 'Ürün Girişi';
+                document.querySelectorAll('.sidebar .nav-link')[1].classList.add('active');
+                loadSections();
+            } else if(pageName === 'sellProduct') {
+                document.getElementById('sellProductPage').style.display = 'block';
+                document.getElementById('pageTitle').textContent = 'Ürün Satışı';
+                document.querySelectorAll('.sidebar .nav-link')[2].classList.add('active');
+                loadProductsForSale();
+            } else if(pageName === 'movements') {
+                document.getElementById('movementsPage').style.display = 'block';
+                document.getElementById('pageTitle').textContent = 'Giriş/Çıkış Raporu';
+                document.querySelectorAll('.sidebar .nav-link')[3].classList.add('active');
+                loadMovements();
+            }
+        }
+
+        function loadProducts() {
+            fetch('/Product/GetProducts')
+                .then(response => response.json())
+                .then(data => {
+                    const tbody = document.getElementById('productsTableBody');
+                    if (data.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">Henüz ürün eklenmemiş</td></tr>';
+                        return;
+                    }
+                    
+                    tbody.innerHTML = data.map(p => `
+                        <tr>
+                            <td>${p.productCode}</td>
+                            <td>${p.name}</td>
+                            <td>${p.sectionName}</td>
+                            <td>${p.shelfName}</td>
+                            <td>${p.stock}</td>
+                            <td>${p.minimumStock}</td>
+                            <td>${p.price ? p.price.toFixed(2) + ' ₺' : '-'}</td>
+                            <td>
+                                <button class="btn btn-sm btn-warning" onclick="editProduct(${p.id}, '${p.productCode}', '${p.name}', '${p.sectionName}', '${p.shelfName}', ${p.stock}, ${p.minimumStock}, ${p.price || 0}, '${p.description || ''}')"> Düzenle</button>
+                            </td>
+                        </tr>
+                    `).join('');
+                })
+                .catch(err => console.error('Ürünler yüklenemedi:', err));
+        }
+
+        function loadSections() {
+            // Yeni ürün formunu göster
+            showNewProductForm();
+        }
+
+        function showNewProductForm() {
+            document.getElementById('newProductForm').style.display = 'block';
+            document.getElementById('addStockForm').style.display = 'none';
+        }
+
+        function showAddStockForm() {
+            document.getElementById('newProductForm').style.display = 'none';
+            document.getElementById('addStockForm').style.display = 'block';
+            loadProductsForAddStock();
+        }
+
+        function loadProductsForAddStock() {
+            fetch('/Product/GetProducts')
+                .then(response => response.json())
+                .then(data => {
+                    const select = document.getElementById('addStockProductSelect');
+                    select.innerHTML = '<option value="">Ürün seçin</option>';
+                    data.forEach(p => {
+                        select.innerHTML += `<option value="${p.id}" data-stock="${p.stock}" data-price="${p.price || 0}">${p.productCode} - ${p.name} (Stok: ${p.stock})</option>`;
+                    });
+                })
+                .catch(err => console.error('Ürünler yüklenemedi:', err));
+        }
+
+        function loadProductsForSale() {
+            fetch('/Product/GetProducts')
+                .then(response => response.json())
+                .then(data => {
+                    const select = document.getElementById('sellProductSelect');
+                    select.innerHTML = '<option value="">Ürün seçin</option>';
+                    data.forEach(p => {
+                        select.innerHTML += `<option value="${p.id}" data-stock="${p.stock}" data-price="${p.price || 0}">${p.productCode} - ${p.name} (Stok: ${p.stock})</option>`;
+                    });
+                })
+                .catch(err => console.error('Ürünler yüklenemedi:', err));
+        }
+
+        function loadMovements() {
+            fetch('/Product/GetStockMovements')
+                .then(response => response.json())
+                .then(data => {
+                    const tbody = document.getElementById('movementsTableBody');
+                    if (data.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">Henüz hareket kaydı yok</td></tr>';
+                        return;
+                    }
+                    
+                    let totalIncome = 0;
+                    let totalExpense = 0;
+                    
+                    tbody.innerHTML = data.map(m => {
+                        const date = new Date(m.movementDate).toLocaleString('tr-TR');
+                        const badgeClass = m.movementType === 'Giriş' ? 'success' : 'danger';
+                        const unitPrice = m.unitPrice || 0;
+                        const totalPrice = m.totalPrice || 0;
+                        
+                        if (m.movementType === 'Giriş') {
+                            totalIncome += totalPrice;
+                        } else {
+                            totalExpense += totalPrice;
+                        }
+                        
+                        return `
+                            <tr>
+                                <td>${date}</td>
+                                <td>${m.productCode}</td>
+                                <td>${m.productName}</td>
+                                <td><span class="badge bg-${badgeClass}">${m.movementType}</span></td>
+                                <td>${m.quantity}</td>
+                                <td>${unitPrice.toFixed(2)} ₺</td>
+                                <td><strong>${totalPrice.toFixed(2)} ₺</strong></td>
+                                <td>${m.notes || '-'}</td>
+                            </tr>
+                        `;
+                    }).join('');
+                    
+                    // Özet bilgilerini güncelle
+                    document.getElementById('totalIncome').textContent = totalIncome.toFixed(2) + ' ₺';
+                    document.getElementById('totalExpense').textContent = totalExpense.toFixed(2) + ' ₺';
+                    const netProfit = totalExpense - totalIncome;
+                    document.getElementById('netProfit').textContent = netProfit.toFixed(2) + ' ₺';
+                })
+                .catch(err => console.error('Hareketler yüklenemedi:', err));
+        }
+
+        // Ürün ekleme formu
+        document.getElementById('addProductForm')?.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            const data = {
+                productCode: formData.get('productCode'),
+                name: formData.get('name'),
+                sectionName: formData.get('sectionName'),
+                shelfName: formData.get('shelfName'),
+                stock: parseInt(formData.get('stock')) || 0,
+                minimumStock: parseInt(formData.get('minimumStock')) || 0,
+                price: parseFloat(formData.get('price')) || null,
+                description: formData.get('description')
+            };
+
+            fetch('/Product/CreateProduct', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    alert(result.message);
+                    e.target.reset();
+                    showPage('products');
+                } else {
+                    alert('Hata: ' + result.message);
+                }
+            })
+            .catch(err => {
+                console.error('Ürün eklenemedi:', err);
+                alert('Ürün eklenirken bir hata oluştu');
+            });
+        });
+
+        // Stok ekleme formu event listeners
+        document.getElementById('addStockProductSelect')?.addEventListener('change', function(e) {
+            const selected = e.target.selectedOptions[0];
+            const stock = selected.getAttribute('data-stock') || 0;
+            const price = selected.getAttribute('data-price') || 0;
+            
+            document.getElementById('currentStockDisplay').value = stock + ' adet';
+            document.getElementById('addStockUnitPrice').value = price;
+            document.getElementById('addStockQuantity').value = '';
+            document.getElementById('addStockTotalPrice').value = '';
+        });
+
+        document.getElementById('addStockQuantity')?.addEventListener('input', calculateAddStockTotal);
+        document.getElementById('addStockUnitPrice')?.addEventListener('input', calculateAddStockTotal);
+
+        function calculateAddStockTotal() {
+            const quantity = parseFloat(document.getElementById('addStockQuantity').value) || 0;
+            const unitPrice = parseFloat(document.getElementById('addStockUnitPrice').value) || 0;
+            const total = quantity * unitPrice;
+            document.getElementById('addStockTotalPrice').value = total.toFixed(2) + ' ₺';
+        }
+
+        document.getElementById('addStockToProductForm')?.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            const productId = parseInt(formData.get('productId'));
+            const quantity = parseInt(formData.get('quantity'));
+            const unitPrice = parseFloat(formData.get('unitPrice')) || 0;
+            
+            const data = {
+                productId: productId,
+                quantity: quantity,
+                unitPrice: unitPrice,
+                notes: formData.get('notes')
+            };
+
+            fetch('/Product/AddStock', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    alert(result.message);
+                    e.target.reset();
+                    document.getElementById('currentStockDisplay').value = '';
+                    document.getElementById('addStockTotalPrice').value = '';
+                    showPage('products');
+                } else {
+                    alert('Hata: ' + result.message);
+                }
+            })
+            .catch(err => {
+                console.error('Stok eklenemedi:', err);
+                alert('Stok eklenirken bir hata oluştu');
+            });
+        });
+
+        // Ürün satış formu
+        document.getElementById('sellProductSelect')?.addEventListener('change', function(e) {
+            const selected = e.target.selectedOptions[0];
+            const stock = selected.getAttribute('data-stock') || 0;
+            const price = selected.getAttribute('data-price') || 0;
+            
+            document.getElementById('currentStock').value = stock + ' adet';
+            document.getElementById('sellUnitPrice').value = price;
+            document.getElementById('sellQuantity').value = '';
+            document.getElementById('sellTotalPrice').value = '';
+        });
+
+        document.getElementById('sellQuantity')?.addEventListener('input', calculateSellTotal);
+        document.getElementById('sellUnitPrice')?.addEventListener('input', calculateSellTotal);
+
+        function calculateSellTotal() {
+            const quantity = parseFloat(document.getElementById('sellQuantity').value) || 0;
+            const unitPrice = parseFloat(document.getElementById('sellUnitPrice').value) || 0;
+            const total = quantity * unitPrice;
+            document.getElementById('sellTotalPrice').value = total.toFixed(2) + ' ₺';
+        }
+
+        document.getElementById('sellProductForm')?.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            const productId = parseInt(formData.get('productId'));
+            const quantity = parseInt(formData.get('quantity'));
+            const unitPrice = parseFloat(formData.get('unitPrice'));
+            
+            const data = {
+                productId: productId,
+                quantity: quantity,
+                unitPrice: unitPrice,
+                notes: formData.get('notes')
+            };
+
+            fetch('/Product/SellProduct', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    alert(result.message);
+                    e.target.reset();
+                    document.getElementById('currentStock').value = '';
+                    document.getElementById('sellTotalPrice').value = '';
+                    showPage('products');
+                } else {
+                    alert('Hata: ' + result.message);
+                }
+            })
+            .catch(err => {
+                console.error('Satış yapılamadı:', err);
+                alert('Satış sırasında bir hata oluştu');
+            });
+        });
+
+        function deleteProduct(id) {
+            if (!confirm('Bu ürünü silmek istediğinizden emin misiniz?')) return;
+            
+            fetch(`/Product/DeleteProduct?id=${id}`, { method: 'DELETE' })
+                .then(response => response.json())
+                .then(result => {
+                    alert(result.message);
+                    if (result.success) {
+                        loadProducts();
+                    }
+                })
+                .catch(err => {
+                    console.error('Ürün silinemedi:', err);
+                    alert('Ürün silinirken bir hata oluştu');
+                });
+        }
+
+        // Sayfa yüklendiğinde ürün listesini göster
+        document.addEventListener('DOMContentLoaded', function() {
+            showPage('products');
+            
+            // Arama fonksiyonu
+            const searchInput = document.getElementById('searchInput');
+            if (searchInput) {
+                searchInput.addEventListener('input', function(e) {
+                    const searchText = e.target.value.toLowerCase().trim();
+                    const rows = document.querySelectorAll('#productsTableBody tr');
+                    
+                    let visibleCount = 0;
+                    rows.forEach(row => {
+                        // Boş satırı kontrol et
+                        if (row.cells.length === 1 && row.cells[0].colSpan === 8) {
+                            row.style.display = 'none';
+                            return;
+                        }
+                        
+                        const text = row.textContent.toLowerCase();
+                        if (text.includes(searchText)) {
+                            row.style.display = '';
+                            visibleCount++;
+                        } else {
+                            row.style.display = 'none';
+                        }
+                    });
+                    
+                    // Hiç sonuç yoksa mesaj göster
+                    if (visibleCount === 0 && searchText !== '') {
+                        const tbody = document.getElementById('productsTableBody');
+                        const existingMsg = tbody.querySelector('.no-results-msg');
+                        if (!existingMsg) {
+                            const noResultRow = document.createElement('tr');
+                            noResultRow.className = 'no-results-msg';
+                            noResultRow.innerHTML = '<td colspan="8" class="text-center text-muted">Sonuç bulunamadı</td>';
+                            tbody.appendChild(noResultRow);
+                        }
+                    } else {
+                        // Sonuç bulundu mesajını kaldır
+                        const existingMsg = document.querySelector('.no-results-msg');
+                        if (existingMsg) existingMsg.remove();
+                    }
+                });
+            }
+        });
+
+        // Tablo sıralama fonksiyonu
+        let sortDirection = {};
+        function sortTable(columnIndex) {
+            const table = document.getElementById('productsTable');
+            const tbody = table.querySelector('tbody');
+            const rows = Array.from(tbody.querySelectorAll('tr')).filter(row => row.cells.length > 1);
+            
+            // Sıralama yönünü belirle
+            sortDirection[columnIndex] = !sortDirection[columnIndex];
+            const isAsc = sortDirection[columnIndex];
+            
+            rows.sort((a, b) => {
+                let aValue = a.cells[columnIndex].textContent.trim();
+                let bValue = b.cells[columnIndex].textContent.trim();
+                
+                // Sayısal sütunlar için (Stok, Min. Stok, Fiyat)
+                if (columnIndex === 4 || columnIndex === 5 || columnIndex === 6) {
+                    aValue = parseFloat(aValue.replace(/[^\d.-]/g, '')) || 0;
+                    bValue = parseFloat(bValue.replace(/[^\d.-]/g, '')) || 0;
+                    return isAsc ? aValue - bValue : bValue - aValue;
+                }
+                
+                // Metin sütunları
+                return isAsc 
+                    ? aValue.localeCompare(bValue, 'tr')
+                    : bValue.localeCompare(aValue, 'tr');
+            });
+            
+            // Satırları yeniden ekle
+            rows.forEach(row => tbody.appendChild(row));
+            
+            // Sıralama ikonlarını güncelle
+            document.querySelectorAll('.sort-icon').forEach(icon => icon.textContent = '⇅');
+            const header = table.querySelectorAll('th')[columnIndex];
+            header.querySelector('.sort-icon').textContent = isAsc ? '↑' : '↓';
+        }
+
+        // Ürün düzenleme fonksiyonları
+        function editProduct(id, productCode, name, sectionName, shelfName, stock, minimumStock, price, description) {
+            // Modal alanlarını doldur
+            document.getElementById('editProductId').value = id;
+            document.getElementById('editProductCode').value = productCode;
+            document.getElementById('editProductName').value = name;
+            document.getElementById('editSectionName').value = sectionName;
+            document.getElementById('editShelfName').value = shelfName;
+            document.getElementById('editStock').value = stock;
+            document.getElementById('editMinimumStock').value = minimumStock;
+            document.getElementById('editPrice').value = price || '';
+            document.getElementById('editDescription').value = description;
+            
+            // Modalı göster
+            const modal = new bootstrap.Modal(document.getElementById('editProductModal'));
+            modal.show();
+        }
+
+        function saveProductEdit() {
+            const productData = {
+                id: parseInt(document.getElementById('editProductId').value),
+                productCode: document.getElementById('editProductCode').value,
+                name: document.getElementById('editProductName').value,
+                sectionName: document.getElementById('editSectionName').value,
+                shelfName: document.getElementById('editShelfName').value,
+                stock: parseInt(document.getElementById('editStock').value),
+                minimumStock: parseInt(document.getElementById('editMinimumStock').value),
+                price: parseFloat(document.getElementById('editPrice').value) || null,
+                description: document.getElementById('editDescription').value
+            };
+
+            fetch('/Product/UpdateProduct', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(productData)
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    alert(result.message);
+                    // Modalı kapat
+                    bootstrap.Modal.getInstance(document.getElementById('editProductModal')).hide();
+                    // Ürün listesini yenile
+                    loadProducts();
+                } else {
+                    alert('Hata: ' + result.message);
+                }
+            })
+            .catch(err => {
+                console.error('Ürün güncellenemedi:', err);
+                alert('Ürün güncellenirken bir hata oluştu');
+            });
+        }
+    </script>
+</body>
+</html>
