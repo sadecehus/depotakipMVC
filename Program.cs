@@ -158,7 +158,8 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
-app.UseHttpsRedirection();
+// Railway deployment için HTTPS redirection devre dışı
+// app.UseHttpsRedirection();
 app.UseRouting();
 
 // Session kullan
