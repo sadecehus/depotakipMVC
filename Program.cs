@@ -7,21 +7,28 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddControllersWithViews();
 
-// PostgreSQL veritabanı bağlantısı
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") 
+// PostgreSQL veritabanı bağlantısı (Railway)
+var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_PUBLIC_URL") 
     ?? Environment.GetEnvironmentVariable("DATABASE_URL");
 
-if (!string.IsNullOrEmpty(connectionString) && connectionString.StartsWith("postgres://"))
+if (!string.IsNullOrEmpty(databaseUrl) && databaseUrl.StartsWith("postgresql://"))
 {
     // Railway PostgreSQL formatını dönüştür
-    var uri = new Uri(connectionString);
+    var uri = new Uri(databaseUrl);
     var username = uri.UserInfo.Split(':')[0];
     var password = uri.UserInfo.Split(':')[1];
-    connectionString = $"Host={uri.Host};Port={uri.Port};Database={uri.AbsolutePath.Trim('/')};Username={username};Password={password};SSL Mode=Require;Trust Server Certificate=true";
+    var connectionString = $"Host={uri.Host};Port={uri.Port};Database={uri.AbsolutePath.Trim('/')};Username={username};Password={password};SSL Mode=Require;Trust Server Certificate=true";
+    
+    builder.Services.AddDbContext<AppDbContext>(options =>
+        options.UseNpgsql(connectionString));
 }
-
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(connectionString));
+else
+{
+    // Fallback to appsettings.json
+    var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+    builder.Services.AddDbContext<AppDbContext>(options =>
+        options.UseNpgsql(connectionString));
+}
 
 // Session ekle
 builder.Services.AddSession(options =>
