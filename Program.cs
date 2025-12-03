@@ -169,7 +169,7 @@ using (var scope = app.Services.CreateScope())
             ProductId = p.Id,
             Quantity = p.Stock,
             MovementType = "Giriş",
-            MovementDate = DateTime.Now.AddDays(-(5 - i / 2)),
+            MovementDate = DateTime.UtcNow.AddDays(-(5 - i / 2)),
             Notes = "İlk stok girişi"
         }).ToArray();
         context.StockMovements.AddRange(movements);

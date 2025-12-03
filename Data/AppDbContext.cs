@@ -21,7 +21,7 @@ public class AppDbContext : DbContext
 
         // İlk kullanıcıyı ekle (admin/admin)
         modelBuilder.Entity<User>().HasData(
-            new User { Id = 1, Username = "admin", Password = "admin" }
+            new User { Id = 1, Username = "adhald", Password = "onlinesm.1299" }
         );
     }
 }
