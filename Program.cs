@@ -4,6 +4,9 @@ using pm.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// PostgreSQL UTC timestamp hatası için
+AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", false);
+
 // Add services to the container.
 builder.Services.AddControllersWithViews();
 

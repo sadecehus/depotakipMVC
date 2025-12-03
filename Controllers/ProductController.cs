@@ -137,7 +137,7 @@ public class ProductController : Controller
                 ProductId = product.Id,
                 Quantity = productDto.Stock,
                 MovementType = "Giriş",
-                MovementDate = DateTime.Now,
+                MovementDate = DateTime.UtcNow,
                 Notes = "İlk stok girişi"
             };
             _context.StockMovements.Add(movement);
@@ -251,7 +251,7 @@ public class ProductController : Controller
             ProductId = product.Id,
             Quantity = sellDto.Quantity,
             MovementType = "Çıkış",
-            MovementDate = DateTime.Now,
+            MovementDate = DateTime.UtcNow,
             UnitPrice = sellDto.UnitPrice,
             TotalPrice = totalPrice,
             Notes = sellDto.Notes ?? "Ürün satışı"
@@ -281,7 +281,7 @@ public class ProductController : Controller
             ProductId = product.Id,
             Quantity = addStockDto.Quantity,
             MovementType = "Giriş",
-            MovementDate = DateTime.Now,
+            MovementDate = DateTime.UtcNow,
             UnitPrice = addStockDto.UnitPrice,
             TotalPrice = totalPrice,
             Notes = addStockDto.Notes ?? "Stok girişi"
@@ -308,7 +308,7 @@ public class ProductController : Controller
             ProductId = product.Id,
             Quantity = Math.Abs(stockUpdate.Quantity),
             MovementType = stockUpdate.Quantity > 0 ? "Giriş" : "Çıkış",
-            MovementDate = DateTime.Now,
+            MovementDate = DateTime.UtcNow,
             Notes = stockUpdate.Notes
         };
 
